@@ -159,8 +159,8 @@ static void BaselineSimpleSinh(benchmark::State &state) {
   std::vector<float> results(input.bulkSize);
   benchmark::DoNotOptimize(results);
   for (auto _ : state) {
-    EvalLoop(input.bulkSize, input.eventMask, input.pts, input.etas, input.phis,
-             input.masses, input.sizes, results);
+    EvalLoopSimpleSinh(input.bulkSize, input.eventMask, input.pts, input.etas,
+                       input.phis, input.masses, input.sizes, results);
     // to force writing to memory of results
     benchmark::ClobberMemory();
   }
