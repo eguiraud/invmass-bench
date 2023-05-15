@@ -403,7 +403,6 @@ void InvariantMassBulkIgnoreMask(const std::vector<bool> &eventMask,
   std::vector<T> xs(nElements);
   std::vector<T> ys(nElements);
   std::vector<T> zs(nElements);
-  std::vector<T> es2(nElements);
   std::vector<T> es(nElements);
 
   // trigonometric functions are expensive and don't vectorize so we only call
@@ -426,11 +425,7 @@ void InvariantMassBulkIgnoreMask(const std::vector<bool> &eventMask,
   // looks like the CPU is happier by calculating these for all elements, even
   // if we'll discard many of the results...
   for (std::size_t i = 0; i < nElements; ++i) {
-    es2[i] = pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i];
-  }
-
-  for (std::size_t i = 0; i < nElements; ++i) {
-    es[i] = std::sqrt(es2[i]);
+    es[i] = std::sqrt(pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i]);
   }
 
   elementIdx = 0u;
@@ -482,7 +477,6 @@ void InvMassBulkIgnoreMaskCustomSinH(const std::vector<bool> &eventMask,
   std::vector<T> xs(nElements);
   std::vector<T> ys(nElements);
   std::vector<T> zs(nElements);
-  std::vector<T> es2(nElements);
   std::vector<T> es(nElements);
 
   // trigonometric functions are expensive and don't vectorize so we only call
@@ -505,11 +499,7 @@ void InvMassBulkIgnoreMaskCustomSinH(const std::vector<bool> &eventMask,
   // looks like the CPU is happier by calculating these for all elements, even
   // if we'll discard many of the results...
   for (std::size_t i = 0; i < nElements; ++i) {
-    es2[i] = pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i];
-  }
-
-  for (std::size_t i = 0; i < nElements; ++i) {
-    es[i] = std::sqrt(es2[i]);
+    es[i] = std::sqrt(pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i]);
   }
 
   elementIdx = 0u;
@@ -561,7 +551,6 @@ void InvMassBulkIgnoreMaskSinhCephes(const std::vector<bool> &eventMask,
   std::vector<T> xs(nElements);
   std::vector<T> ys(nElements);
   std::vector<T> zs(nElements);
-  std::vector<T> es2(nElements);
   std::vector<T> es(nElements);
 
   // trigonometric functions are expensive and don't vectorize so we only call
@@ -584,11 +573,7 @@ void InvMassBulkIgnoreMaskSinhCephes(const std::vector<bool> &eventMask,
   // looks like the CPU is happier by calculating these for all elements, even
   // if we'll discard many of the results...
   for (std::size_t i = 0; i < nElements; ++i) {
-    es2[i] = pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i];
-  }
-
-  for (std::size_t i = 0; i < nElements; ++i) {
-    es[i] = std::sqrt(es2[i]);
+    es[i] = std::sqrt(pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i]);
   }
 
   elementIdx = 0u;
@@ -640,39 +625,27 @@ void InvMassBulkIgnoreMaskPowerSeries(const std::vector<bool> &eventMask,
   std::vector<T> xs(nElements);
   std::vector<T> ys(nElements);
   std::vector<T> zs(nElements);
-  std::vector<T> es2(nElements);
   std::vector<T> es(nElements);
-
-  // trigonometric functions are expensive and don't vectorize so we only call
-  // them when needed
-  std::size_t elementIdx = 0u;
-  for (std::size_t i = 0u; i < bulkSize; ++i) {
-    const auto size = sizes[i];
-    if (eventMask[i]) {
-      for (std::size_t j = 0u; j < size; ++j) {
-        const auto pt_ = pt[elementIdx + j];
-        const auto phi_ = phi[elementIdx + j];
-        T sin, cos;
-        SincosPowerSeries(phi_, sin, cos);
-        xs[elementIdx + j] = pt_ * cos;
-        ys[elementIdx + j] = pt_ * sin;
-        zs[elementIdx + j] = pt_ * SinhPowerSeries(eta[elementIdx + j]);
-      }
-    }
-    elementIdx += size;
-  }
 
   // looks like the CPU is happier by calculating these for all elements, even
   // if we'll discard many of the results...
   for (std::size_t i = 0; i < nElements; ++i) {
-    es2[i] = pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i];
+    const auto pt_ = pt[i];
+    const auto phi_ = phi[i];
+    T sin, cos;
+    SincosPowerSeries(phi_, sin, cos);
+    xs[i] = pt_ * cos;
+    ys[i] = pt_ * sin;
+    zs[i] = pt_ * SinhPowerSeries(eta[i]);
   }
 
+  // keep this a separate loop so it doesn't hinder vectorization of the
+  // previous loop...
   for (std::size_t i = 0; i < nElements; ++i) {
-    es[i] = std::sqrt(es2[i]);
+    es[i] = std::sqrt(pt[i] * pt[i] + zs[i] * zs[i] + mass[i] * mass[i]);
   }
 
-  elementIdx = 0u;
+  std::size_t elementIdx = 0u;
   for (std::size_t i = 0; i < bulkSize; ++i) {
     T x_sum = 0.;
     T y_sum = 0.;
